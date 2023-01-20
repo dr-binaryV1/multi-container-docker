@@ -1,9 +1,9 @@
 const keys = require('./keys')
-const redis = require('redis')
+const Redis = require('ioredis')
 
-const redisClient = redis.createClient({
-  url: keys.redisHost,
-  retry_strategy: () => 1000
+const redisClient = new Redis({
+  host: keys.redisHost,
+  port: keys.redisPort
 })
 
 redisClient.on('connect', () => {
@@ -12,14 +12,15 @@ redisClient.on('connect', () => {
 
 const sub = redisClient.duplicate()
 
-redisClient.connect()
-sub.connect()
-
 function fib(index) {
   if (index < 2) return 1
   return fib(index - 1) + fib(index - 2)
 }
 
-sub.subscribe('insert', (message) => {
-  redisClient.hSet('values', message, fib(parseInt(message)))
+sub.subscribe('insert', (error, message) => {
+  if (error) {
+    console.log(error)
+  }
+  console.log(message)
+  redisClient.hset('values', message, fib(parseInt(message)))
 })

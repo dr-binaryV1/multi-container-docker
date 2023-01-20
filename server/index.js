@@ -2,7 +2,7 @@ const keys = require('./keys')
 const express = require('express')
 const bodyParser = require('body-parser')
 const cors = require('cors')
-const redis = require('redis')
+const Redis = require('ioredis')
 
 const app = express()
 app.use(cors())
@@ -26,17 +26,15 @@ pgClient.on("connect", (client) => {
 });
 
 
-const redisClient = redis.createClient({
-  url: keys.redishHost,
+const redisClient = new Redis({
+  host: keys.redishHost,
+  port: keys.redisPort,
   retry_strategy: () => 1000
 })
 
 redisClient.on('connect', () => console.log("Cache Ready"))
 
 const redisPublisher = redisClient.duplicate()
-
-redisClient.connect()
-redisPublisher.connect()
 
 app.get('/', (req, res) => {
   res.send('hi')
@@ -48,7 +46,7 @@ app.get('/values/all', async (req, res) => {
 })
 
 app.get('/values/current', async (req, res) => {
-  const values = await redisClient.hGetAll('values')
+  const values = await redisClient.hgetall('values')
   res.send(values)
 })
 
@@ -59,7 +57,7 @@ app.post('/values', async (req, res) => {
     return res.status(422).send('Index too high')
   }
 
-  redisClient.hSet('values', index, 'Nothing yet')
+  redisClient.hset('values', index, 'Nothing yet')
   await redisPublisher.publish('insert', index)
   pgClient.query('INSERT INTO values(number) VALUES($1)', [index])
 

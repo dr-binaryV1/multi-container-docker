@@ -1,6 +1,6 @@
 version: "3"
 services:
-  client:
+  frontend:
     image: "drbinary/multi-client-10-14"
     mem_limit: 128m
     hostname: frontend
